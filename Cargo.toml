@@ -1,0 +1,8 @@
+[package]
+name = "three_little_words"
+version = "0.1.0"
+authors = ["Ryan O'Beirne <robeirne@spoonflower.com>"]
+edition = "2018"
+
+[dependencies]
+rand = "0.6.5"
