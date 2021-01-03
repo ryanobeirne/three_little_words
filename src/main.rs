@@ -12,6 +12,7 @@ fn main() -> Result<(), Error> {
     let matches = app().get_matches();
     let count = matches.value_of("count").unwrap().parse().unwrap();
     let four = matches.is_present("four");
+    let delimiter = matches.value_of("delimiter").unwrap();
 
     let std_out = &mut stdout();
     let rng = &mut thread_rng();
@@ -19,27 +20,27 @@ fn main() -> Result<(), Error> {
     for _i in 0..count {
         writeln!(std_out, "{}",
             if four {
-                four_words(rng)
+                four_words(rng, delimiter)
             } else {
-                three_words(rng)
+                three_words(rng, delimiter)
             })?
     }
 
     Ok(())
 }
 
-fn three_words(rng: &mut ThreadRng) -> String {
+fn three_words(rng: &mut ThreadRng, delimiter: &str) -> String {
     let adjs = ADJECTIVES.choose_multiple(rng, 2).collect::<Vec<_>>();
     let noun = NOUNS.choose(rng).expect("Slice is empty!");
 
-    format!("{} {} {}", adjs[0], adjs[1], noun)
+    format!("{}{del}{}{del}{}", adjs[0], adjs[1], noun, del=delimiter)
 }
 
-fn four_words(rng: &mut ThreadRng) -> String {
+fn four_words(rng: &mut ThreadRng, delimiter: &str) -> String {
     let adjs = ADJECTIVES.choose_multiple(rng, 2).collect::<Vec<_>>();
     let nouns = NOUNS.choose_multiple(rng, 2).collect::<Vec<_>>();
 
-    format!("{} {} {} {}", adjs[0], nouns[0], adjs[1], nouns[1])
+    format!("{}{del}{}{del}{}{del}{}", adjs[0], nouns[0], adjs[1], nouns[1], del=delimiter)
 }
 
 fn app() -> App<'static, 'static> {
@@ -59,6 +60,13 @@ fn app() -> App<'static, 'static> {
                 .help("Generate four words in the format [adjective noun adjective noun]")
                 .short("4")
                 .long("four")
+        )
+        .arg(
+            Arg::with_name("delimiter")
+                .help("Separate words with a delimeter")
+                .short("d")
+                .long("delimiter")
+                .default_value(" ")
         )
 }
 

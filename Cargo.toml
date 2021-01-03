@@ -1,7 +1,7 @@
 [package]
 name = "three_little_words"
 description = "Generate random yet memorable passwords in the format [adjective adjective noun]"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Ryan O'Beirne <robeirne@spoonflower.com>"]
 edition = "2018"
 
