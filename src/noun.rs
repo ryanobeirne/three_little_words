@@ -60183,3 +60183,18 @@ pub const NOUNS: &[&str] = &[
 fn count() {
     println!("NOUNS: {}", NOUNS.len());
 }
+
+#[test]
+/// We don't want any words less than 4 characters or more than 12
+fn word_len() {
+    use std::collections::BTreeMap;
+
+    let mut count_nouns = BTreeMap::new();
+    for noun in NOUNS {
+        *count_nouns.entry(noun.len()).or_insert(0) += 1;
+    }
+    dbg!(&count_nouns);
+
+    assert!(count_nouns.keys().max().unwrap() <= &12);
+    assert!(count_nouns.keys().min().unwrap() >= &4);
+}

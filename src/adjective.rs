@@ -27507,3 +27507,18 @@ pub const ADJECTIVES: &[&str] = &[
 fn count() {
     println!("ADJECTIVES: {}", ADJECTIVES.len());
 }
+
+#[test]
+/// We don't want any words less than 4 characters or more than 12
+fn word_len() {
+    use std::collections::BTreeMap;
+
+    let mut count_adjs = BTreeMap::new();
+    for adj in ADJECTIVES {
+        *count_adjs.entry(adj.len()).or_insert(0) += 1;
+    }
+    dbg!(&count_adjs);
+
+    assert!(count_adjs.keys().max().unwrap() <= &12);
+    assert!(count_adjs.keys().min().unwrap() >= &4);
+}
