@@ -32,7 +32,16 @@ pub fn app() -> App<'static, 'static> {
                 .value_name("N")
                 .long("length")
                 .validator(is_int_gt3)
-                .default_value("12")
+        )
+        .arg(
+            Arg::with_name("limit")
+                .help("Limit total length to N characters")
+                .short("L")
+                .value_name("N")
+                .long("limit")
+                .conflicts_with("length")
+                .conflicts_with("four")
+                .validator(is_int_gt20)
         )
 }
 
@@ -44,11 +53,27 @@ fn is_int(s: String) -> Result<(), String> {
 }
 
 fn is_int_gt3(s: String) -> Result<(), String> {
-    is_int(s.to_owned())?;
+    match s.parse::<usize>() {
+        Ok(int) => {
+            if int > 3 {
+                Ok(())
+            } else {
+                Err(format!("integer must be greater than 3"))
+            }
+        }
+        Err(_) => Err(format!("invalid integer: `{}`", s)),
+    }
+}
 
-    if s.parse::<usize>().unwrap() > 3 {
-        Ok(())
-    } else {
-        Err(format!("integer too small ({}): must be greater than 3", s))
+fn is_int_gt20(s: String) -> Result<(), String> {
+    match s.parse::<usize>() {
+        Ok(int) => {
+            if int > 20 {
+                Ok(())
+            } else {
+                Err(format!("integer must be greater than 20"))
+            }
+        }
+        Err(_) => Err(format!("invalid integer: `{}`", s)),
     }
 }
