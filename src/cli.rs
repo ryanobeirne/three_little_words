@@ -13,10 +13,13 @@ pub fn app() -> App<'static, 'static> {
                 .default_value("20"),
         )
         .arg(
-            Arg::with_name("four")
-                .help("Generate four words in the format [adjective noun adjective noun]")
-                .short("4")
-                .long("four")
+            Arg::with_name("word-count")
+                .help("Use N number of words per line")
+                .short("w")
+                .long("word-count")
+                .value_name("N")
+                .possible_values(&["1", "2", "3", "4"])
+                .default_value("3")
         )
         .arg(
             Arg::with_name("delimiter")
@@ -40,7 +43,6 @@ pub fn app() -> App<'static, 'static> {
                 .value_name("N")
                 .long("limit")
                 .conflicts_with("length")
-                .conflicts_with("four")
                 .validator(is_int_gt20)
         )
 }

@@ -1,14 +1,14 @@
-use rand::prelude::*;
-use std::io::{Write, Error, stdout};
-use std::fmt;
 use clap::ArgMatches;
+use rand::prelude::*;
+use std::fmt;
+use std::io::{stdout, Error, Write};
 
+mod adjective;
 mod cli;
 mod noun;
-mod adjective;
 
-use noun::NOUNS;
 use adjective::ADJECTIVES;
+use noun::NOUNS;
 
 fn main() -> Result<(), Error> {
     let matches = cli::app().get_matches();
@@ -26,6 +26,14 @@ fn main() -> Result<(), Error> {
 
 use Words::*;
 enum Words {
+    OneWord {
+        noun: String,
+    },
+    TwoWords {
+        adj: String,
+        noun: String,
+        delimiter: String,
+    },
     ThreeWords {
         adj0: String,
         adj1: String,
@@ -42,6 +50,20 @@ enum Words {
 }
 
 impl Words {
+    fn new1(nouns: Rando) -> Self {
+        OneWord {
+            noun: nouns[0].to_string(),
+        }
+    }
+
+    fn new2(adjs: Rando, nouns: Rando, del: &str) -> Self {
+        TwoWords {
+            adj: adjs[0].to_string(),
+            noun: nouns[0].to_string(),
+            delimiter: del.to_string(),
+        }
+    }
+
     fn new3(adjs: Rando, nouns: Rando, del: &str) -> Self {
         ThreeWords {
             adj0: adjs[0].to_string(),
@@ -60,12 +82,15 @@ impl Words {
             delimiter: del.to_string(),
         }
     }
-
 }
 
 impl fmt::Display for Words {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
+            OneWord { noun }
+                => write!(f, "{}", noun),
+            TwoWords { adj, noun, delimiter }
+                => write!(f, "{}{del}{}", adj, noun, del=delimiter),
             ThreeWords { adj0, adj1, noun, delimiter }
                 => write!(f, "{}{del}{}{del}{}", adj0, adj1, noun, del=delimiter),
             FourWords { adj0, noun0, adj1, noun1, delimiter }
@@ -88,10 +113,11 @@ impl<'rng, 'matches> From<RangeMatches<'rng, 'matches>> for Words {
             adjs_nouns(rng)
         };
 
-        if matches.is_present("four") {
-            Words::new4(adjs, nouns, delimiter)
-        } else {
-            Words::new3(adjs, nouns, delimiter)
+        match WordCount::from(matches) {
+            One => Words::new1(nouns),
+            Two => Words::new2(adjs, nouns, delimiter),
+            Three => Words::new3(adjs, nouns, delimiter),
+            Four => Words::new4(adjs, nouns, delimiter),
         }
     }
 }
@@ -106,28 +132,18 @@ fn adjs_nouns(rng: &mut ThreadRng) -> (Rando, Rando) {
 }
 
 /// Filter out words longer than a certain length
-fn adjs_nouns_ltd<'a>(rng: &mut ThreadRng, matches: &ArgMatches) -> (Rando<'a>, Rando<'a>) {
-    let word_len = |word: &&&str| word.len() <= matches.value_of("length").unwrap_or("12").parse().unwrap();
-    let adjs = ADJECTIVES
-        .iter()
-        .filter(word_len)
-        .choose_multiple(rng, 2);
-    let nouns = NOUNS
-        .iter()
-        .filter(word_len)
-        .choose_multiple(rng, 2);
+fn adjs_nouns_ltd<'a>(
+    rng: &mut ThreadRng,
+    matches: &ArgMatches<'static>,
+) -> (Rando<'a>, Rando<'a>) {
+    let word_len =
+        |word: &&&str| word.len() <= matches.value_of("length").unwrap_or("12").parse().unwrap();
+    let adjs = ADJECTIVES.iter().filter(word_len).choose_multiple(rng, 2);
+    let nouns = NOUNS.iter().filter(word_len).choose_multiple(rng, 2);
 
     if let Some(limit) = matches.value_of("limit") {
-        let del_len = matches.value_of("delimiter").unwrap_or(" ").len();
-        let gaps = if matches.is_present("four") {
-            3
-        } else {
-            2
-        };
-        let adds = del_len * gaps;
-
-        // try it again if it's too long
-        if char_count(&adjs, &nouns, adds, matches.is_present("four")) > limit.parse().unwrap() {
+        if char_count(&adjs, &nouns, &matches) > limit.parse().unwrap() {
+            // try it again if it's too long
             adjs_nouns_ltd(rng, matches)
         } else {
             (adjs, nouns)
@@ -137,19 +153,73 @@ fn adjs_nouns_ltd<'a>(rng: &mut ThreadRng, matches: &ArgMatches) -> (Rando<'a>, 
     }
 }
 
-fn char_count(adjs: &Rando, nouns: &Rando, adds: usize, four: bool) -> usize {
-    let adjs = adjs.iter().flat_map(|s| s.chars()).count();
-    let nouns = if four {
-        nouns.iter().flat_map(|s| s.chars()).count()
-    } else {
-        nouns[0].len()
+fn char_count(adjs: &Rando, nouns: &Rando, matches: &ArgMatches<'static>) -> usize {
+    let word_count = WordCount::from(matches);
+    let del_len = matches.value_of("delimiter").unwrap().len();
+    let adds = (word_count as usize - 1) * del_len;
+
+    // Find the length of all the words we'll actually be using
+    let (adjs, nouns) = match word_count {
+        One => (0, nouns[0].len()),
+        Two => (adjs[0].len(), nouns[0].len()),
+        Three => (adjs.iter().flat_map(|s| s.chars()).count(), nouns[0].len()),
+        Four => (
+            adjs.iter().flat_map(|s| s.chars()).count(),
+            nouns.iter().flat_map(|s| s.chars()).count(),
+        ),
     };
 
     adjs + nouns + adds
 }
 
+use WordCount::*;
+#[derive(Clone, Copy)]
+enum WordCount {
+    One = 1,
+    Two = 2,
+    Three = 3,
+    Four = 4,
+}
+
+impl Default for WordCount {
+    fn default() -> Self {
+        Three
+    }
+}
+
+impl std::str::FromStr for WordCount {
+    type Err = String;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s {
+            "1" => One,
+            "2" => Two,
+            "3" => Three,
+            "4" => Four,
+            x => return Err(format!("invalid WordCount: `{}`", x)),
+        })
+    }
+}
+
+impl<'a> From<&'a ArgMatches<'static>> for WordCount {
+    fn from(matches: &'a ArgMatches) -> Self {
+        matches
+            .value_of("word-count")
+            .unwrap_or("3")
+            .parse()
+            .unwrap()
+    }
+}
+
 #[test]
 fn possible_combos() {
-    eprintln!("Possible combos (3): {}", ADJECTIVES.len() * ADJECTIVES.len() * NOUNS.len());
-    eprintln!("Possible combos (4): {}", ADJECTIVES.len() * NOUNS.len() * ADJECTIVES.len() * NOUNS.len());
+    eprintln!("Possible combos (1): {}", NOUNS.len());
+    eprintln!("Possible combos (2): {}", ADJECTIVES.len() * NOUNS.len());
+    eprintln!(
+        "Possible combos (3): {}",
+        ADJECTIVES.len() * ADJECTIVES.len() * NOUNS.len()
+    );
+    eprintln!(
+        "Possible combos (4): {}",
+        ADJECTIVES.len() * NOUNS.len() * ADJECTIVES.len() * NOUNS.len()
+    );
 }
