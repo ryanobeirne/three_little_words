@@ -27,7 +27,7 @@ fn main() -> Result<(), Error> {
 use Words::*;
 enum Words {
     OneWord {
-        noun: String,
+        word: String,
     },
     TwoWords {
         adj: String,
@@ -50,9 +50,17 @@ enum Words {
 }
 
 impl Words {
-    fn new1(nouns: Rando) -> Self {
-        OneWord {
-            noun: nouns[0].to_string(),
+    fn new1(adjs: Rando, nouns: Rando) -> Self {
+        let mut rng = thread_rng();
+
+        if rng.gen() {
+            OneWord {
+                word: nouns[rng.gen_range(0..nouns.len())].to_string(),
+            }
+        } else {
+            OneWord {
+                word: adjs[rng.gen_range(0..adjs.len())].to_string(),
+            }
         }
     }
 
@@ -87,7 +95,7 @@ impl Words {
 impl fmt::Display for Words {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            OneWord { noun }
+            OneWord { word: noun }
                 => write!(f, "{}", noun),
             TwoWords { adj, noun, delimiter }
                 => write!(f, "{}{del}{}", adj, noun, del=delimiter),
@@ -114,7 +122,7 @@ impl<'rng, 'matches> From<RangeMatches<'rng, 'matches>> for Words {
         };
 
         match WordCount::from(matches) {
-            One => Words::new1(nouns),
+            One => Words::new1(adjs, nouns),
             Two => Words::new2(adjs, nouns, delimiter),
             Three => Words::new3(adjs, nouns, delimiter),
             Four => Words::new4(adjs, nouns, delimiter),
@@ -212,7 +220,7 @@ impl<'a> From<&'a ArgMatches<'static>> for WordCount {
 
 #[test]
 fn possible_combos() {
-    eprintln!("Possible combos (1): {}", NOUNS.len());
+    eprintln!("Possible combos (1): {}", NOUNS.len() + ADJECTIVES.len());
     eprintln!("Possible combos (2): {}", ADJECTIVES.len() * NOUNS.len());
     eprintln!(
         "Possible combos (3): {}",
