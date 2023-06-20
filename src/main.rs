@@ -90,6 +90,43 @@ impl Words {
             delimiter: del.to_string(),
         }
     }
+
+    fn capitalize(&mut self) {
+        match self {
+            OneWord { ref mut word } => {
+                *word = capitalize(&word);
+            }
+            TwoWords { ref mut adj, ref mut noun, .. } => {
+                *adj = capitalize(&adj);
+                *noun = capitalize(&noun);
+            }
+            ThreeWords { ref mut adj0, ref mut adj1, ref mut noun, .. } => {
+                *adj0 = capitalize(&adj0);
+                *adj1 = capitalize(&adj1);
+                *noun = capitalize(&noun);
+            }
+            FourWords { ref mut adj0, ref mut noun0, ref mut adj1, ref mut noun1, .. } => {
+                *adj0 = capitalize(&adj0);
+                *adj1 = capitalize(&adj1);
+                *noun0 = capitalize(&noun0);
+                *noun1 = capitalize(&noun1);
+            }
+        }
+    }
+}
+
+fn capitalize<'a>(s: &'a str) -> String {
+    match s.len() {
+        0 => String::new(),
+        1 => s.to_uppercase(),
+        _ => format!("{}{}", s.get(0..1).unwrap().to_uppercase(), s.get(1..).unwrap())
+    }
+}
+
+#[test]
+fn cap_str() {
+    assert_eq!(capitalize("derp"), "Derp");
+    assert_eq!(capitalize("Derp"), "Derp");
 }
 
 impl fmt::Display for Words {
@@ -121,12 +158,18 @@ impl<'rng, 'matches> From<RangeMatches<'rng, 'matches>> for Words {
             adjs_nouns(rng)
         };
 
-        match WordCount::from(matches) {
+        let mut words = match WordCount::from(matches) {
             One => Words::new1(adjs, nouns),
             Two => Words::new2(adjs, nouns, delimiter),
             Three => Words::new3(adjs, nouns, delimiter),
             Four => Words::new4(adjs, nouns, delimiter),
+        };
+
+        if matches.is_present("capitalize") {
+            words.capitalize();
         }
+
+        words
     }
 }
 

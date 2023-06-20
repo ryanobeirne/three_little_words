@@ -45,6 +45,14 @@ pub fn app() -> App<'static, 'static> {
                 .conflicts_with("length")
                 .validator(is_int_gt20)
         )
+        .arg(
+            Arg::with_name("capitalize")
+                .help("Capitalize each word")
+                .short("c")
+                .long("capitalize")
+                .alias("cap")
+                .takes_value(false)
+        )
 }
 
 fn is_int(s: String) -> Result<(), String> {
